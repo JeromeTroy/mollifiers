@@ -139,12 +139,11 @@ def smooth_step(x : float, end_support=0.0, begin_identity=1.0):
     else:
         # x in [end_support, begin_identity] -> z in [0, 1]
         integral_scaling = begin_identity - end_support
-        z = x - end_support / integral_scaling
+        z = (x - end_support) / (begin_identity - end_support)
         unscaled_result = quad(
             lambda x: mollifier(x, loc=0.5, scale=0.5), 0, z
         )
-        return unscaled_result[0] / l1_norm_default_mollifier * \
-            integral_scaling
+        return unscaled_result[0] / l1_norm_default_mollifier
 
 @smooth_step.register
 def _(x : list, end_support=0.0, begin_identity=1.0):
@@ -190,8 +189,9 @@ def smooth_indicator(x, unity_span=(-1.0, 1.0), rev_up=1.0, rev_down=1.0):
         Has the same datatype as x.
     """
 
-    return smooth_step(x, 
-        end_support=unity_span[0]-rev_up, begin_identity=unity_span[0]) * \
-            smooth_step(x, 
-                end_support=unity_span[1]+rev_down, begin_identity=unity_span[1])
+    
+    cutoff_from_below = smooth_step(x, end_support=unity_span[0] - rev_up, begin_identity=unity_span[0])
+    cutoff_from_above = smooth_step(-x, end_support=-unity_span[1] - rev_down, begin_identity=-unity_span[1])
+
+    return cutoff_from_above * cutoff_from_below
 
